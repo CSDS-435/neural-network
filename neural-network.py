@@ -17,22 +17,22 @@ def back_propagate(weights, theta, layers, c, outputs, alpha=0.1):
             weights[i] += alpha * outputs[i - 1].T * error[i]
             theta[i] += alpha * error[i]
 
-def feed_forward(weights, theta, x):
-        outputs = [np.zeros_like(t) for t in theta]
-        output = x.reshape((1, -1))
+def update_weight(weights, theta, x):
+        newWeight = [np.zeros_like(t) for t in theta]
+        w = x.reshape((1, -1))
         for i in range(len(weights)):
-            #print(output, weights[i])
-            output = sigmoid(np.dot(output, weights[i]) + theta[i])
-            outputs[i] = output
-        return outputs
+            #print(w, weights[i])
+            w = sigmoid(np.dot(w, weights[i]) + theta[i])
+            newWeight[i] = w
+        return newWeight
 
-def fit(weights, theta, layers, X, y, epoch=1000, alpha=0.1): # choosing 0.1 as the default value
+def train_model(weights, theta, layers, X, y, epoch=1000, alpha=0.1): # choosing 0.1 as the default value
     for _ in range(epoch):
         for idx in range(X.shape[0]):
             #print(X[idx, :].reshape((1, -1)))
-            outputs = feed_forward(weights, theta, X[idx, :])
-            #print(outputs)
-            back_propagate(weights, theta, layers, y[idx, :], outputs, alpha=alpha)
+            weights = update_weight(weights, theta, X[idx, :])
+            #print(weights)
+            back_propagate(weights, theta, layers, y[idx, :], weights, alpha=alpha)
             #print(self.weights)
 
 class Classifier:
@@ -50,10 +50,10 @@ class Classifier:
             self.bias[i - 1] = gen_func((1, layers[i]))
             
     def train(self, X: np.matrix, y, epoch=1000, alpha=0.1):
-        fit(self.weights, self.bias, self.layers, X, y, epoch, alpha)
+        train_model(self.weights, self.bias, self.layers, X, y, epoch, alpha)
             
-    def _feed_forward(self, x):
-        return feed_forward(self.weights, self.bias, x)
+    def _update_weight(self, x):
+        return update_weight(self.weights, self.bias, x)
 
     def _back_propagate(self, y, outputs, alpha=0.1):
         back_propagate(self.weights, self.bias, self.layers, y, outputs, alpha)
