@@ -3,37 +3,8 @@
 
 import numpy as np
 from numpy.core.numeric import zeros_like
-from numba import njit
 
 def sigmoid(i): return 1.0 / (1.0 + np.exp(-i))
-
-def back_propagate(weights, theta, layers, c, outputs, alpha=0.1):
-        error = [np.zeros_like(t) for t in theta]
-        o = outputs[-1]
-        error[-1] = o * (1.0 - o) * (c - o)
-        for i in range(len(weights) - 2, -1, -1):
-            error[i] = outputs[i] * (1.0 - outputs[i]) * (error[i + 1]@weights[i+1].T)
-        for i in range(len(weights) - 1, -1, -1):
-            weights[i] += alpha * outputs[i - 1].T * error[i]
-            theta[i] += alpha * error[i]
-
-def update_weight(weights, theta, x):
-        newWeight = [np.zeros_like(t) for t in theta]
-        w = x.reshape((1, -1))
-        for i in range(len(weights)):
-            #print(w, weights[i])
-            w = sigmoid(np.dot(w, weights[i]) + theta[i])
-            newWeight[i] = w
-        return newWeight
-
-def train_model(weights, theta, layers, X, y, epoch=1000, alpha=0.1): # choosing 0.1 as the default value
-    for _ in range(epoch):
-        for idx in range(X.shape[0]):
-            #print(X[idx, :].reshape((1, -1)))
-            weights = update_weight(weights, theta, X[idx, :])
-            #print(weights)
-            back_propagate(weights, theta, layers, y[idx, :], weights, alpha=alpha)
-            #print(self.weights)
 
 class Classifier:
 
@@ -42,21 +13,44 @@ class Classifier:
         # list of weights
         self.weights = [None] * (len(layers) - 1)
         # list of biases
-        self.bias = [None] * (len(layers) - 1)
+        self.theta = [None] * (len(layers) - 1)
         gen_func = self._get_gen_func(init_val_gen)
         for i in range(1, len(layers)):
-            
             self.weights[i - 1] = gen_func((layers[i-1], layers[i]))
-            self.bias[i - 1] = gen_func((1, layers[i]))
-            
-    def train(self, X: np.matrix, y, epoch=1000, alpha=0.1):
-        train_model(self.weights, self.bias, self.layers, X, y, epoch, alpha)
-            
-    def _update_weight(self, x):
-        return update_weight(self.weights, self.bias, x)
+            self.theta[i - 1] = gen_func((1, layers[i]))
 
-    def _back_propagate(self, y, outputs, alpha=0.1):
-        back_propagate(self.weights, self.bias, self.layers, y, outputs, alpha)
+    def _get_gen_func(self, init_val_gen='random'):
+        if init_val_gen == 'random':
+            return lambda x: np.random.uniform(low=-1, high=1, size=x)
+        elif init_val_gen == 'zero':
+            return lambda x: np.zeros(size=x)
+
+    def back_propagate(self, c, newWeights, alpha=0.1):
+        o = newWeights[-1]
+        error = [np.zeros_like(t) for t in self.theta]
+        error[-1] = o * (1.0 - o) * (c - o)
+        for i in range(len(self.weights) - 2, -1, -1):
+            error[i] = newWeights[i] * (1.0 - newWeights[i]) * (error[i + 1]@self.weights[i+1].T)
+        for i in range(len(self.weights) - 1, -1, -1):
+            self.theta[i] += alpha * error[i]
+            weights[i] += alpha * newWeights[i - 1].T * error[i]
+
+    def update_weight(self, x):
+        w = x.reshape((1, -1))
+        newWeight = [np.zeros_like(t) for t in self.theta]
+        for i in range(len(self.weights)):
+            # print(w, self.weights[i])
+            w = sigmoid(np.dot(w, self.weights[i]) + self.theta[i])
+            newWeight[i] = w
+        return newWeight
+
+    def train(self, X: np.matrix, y, epoch=1000, alpha=0.1):
+        for _ in range(epoch):
+            for idx in range(X.shape[0]):
+                newWeights = self.update_weight(X[idx, :].reshape((1, -1)))
+                # print(newWeights)
+                self.back_propagate(y[idx, :], newWeights, alpha=alpha)
+                # print(self.weights)
 
 if __name__ == "__main__":
     # Test case 
@@ -85,5 +79,5 @@ if __name__ == "__main__":
     model.weights = weights
     model.bias = bias
     model.train(np.array([[1.0, 0.0, 1.0]]), np.array([[1]]), epoch=1,alpha=0.9)
-    # print(model.weights)
-    # print(model.bias)
+    print(model.weights)
+    print(model.bias)
